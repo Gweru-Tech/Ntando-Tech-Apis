@@ -1,0 +1,41 @@
+{
+  "name": "Ladybug🐞 Apis",
+  "version": "Ladybug🐞 Ui",
+  "description": "These apis are only for Ladybug 🐞 bot project but if you would like to use our apis contact us on Ladybug🐞-Mods.com",
+  "header": {
+    "status": "🐞🐞🐞",
+    "imageSrc": [
+      "http://Ntandomods-cdn.vercel.app/file/c0m040.png"
+    ],
+    "imageSize": {
+      "mobile": "80%",
+      "tablet": "40%",
+      "desktop": "40%"
+    }
+  },
+  "apiSettings": {
+    "creator": "Ntando Mods"
+  },
+  "links": [
+    {
+      "name": "Profile",
+      "url": "https://github.com/Ntando-Modder"
+    },
+    {
+      "name": "Contact Me",
+      "url": "https://wa.me/263777124998"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Download",
+      "items": [
+        {
+          "name": "TikTok",
+          "desc": "Download TikTok video (with or without watermark)",
+          "path": "/download/tiktok?url="
+        }
+      ]
+    }
+  ]
+}
