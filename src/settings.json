@@ -34,6 +34,66 @@
           "name": "TikTok",
           "desc": "Download TikTok video (with or without watermark)",
           "path": "/download/tiktok?url="
+        },
+        {
+          "name": "Instagram",
+          "desc": "Download Instagram photos, videos, reels and IGTV",
+          "path": "/download/instagram?url="
+        },
+        {
+          "name": "Facebook",
+          "desc": "Download Facebook videos in HD quality",
+          "path": "/download/facebook?url="
+        },
+        {
+          "name": "YouTube",
+          "desc": "Download YouTube videos and audio",
+          "path": "/download/youtube?url="
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "items": [
+        {
+          "name": "ChatGPT",
+          "desc": "AI chatbot powered by GPT",
+          "path": "/ai/chatgpt?text="
+        },
+        {
+          "name": "Image Generator",
+          "desc": "Generate AI images from text prompts",
+          "path": "/ai/imagine?prompt="
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "items": [
+        {
+          "name": "Google Search",
+          "desc": "Search the web using Google",
+          "path": "/search/google?q="
+        },
+        {
+          "name": "YouTube Search",
+          "desc": "Search for YouTube videos",
+          "path": "/search/youtube?q="
+        }
+      ]
+    },
+    {
+      "name": "Tools",
+      "items": [
+        {
+          "name": "Short URL",
+          "desc": "Shorten long URLs",
+          "path": "/tools/shorturl?url="
+        },
+        {
+          "name": "Weather",
+          "desc": "Get weather information for any city",
+          "path": "/tools/weather?city="
         }
       ]
     }
