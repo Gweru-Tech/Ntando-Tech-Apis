@@ -1,91 +1,171 @@
-const axios = require("axios");
+// youtube-search-api.js
+const express = require('express');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
-async function youtubeSearch(query) {
-  try {
-    // Fetch the raw YouTube search HTML
-    const response = await axios.get(
-      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-      }
-    );
+const router = express.Router();
 
-    const html = response.data;
+// YouTube Search API
+router.get('/api/search/youtube', async (req, res) => {
+    try {
+        const { query, limit = 10 } = req.query;
 
-    // Match the ytInitialData object (new YouTube format)
-    const regex = /(?:var|window\[")ytInitialData(?:"])?\s*=\s*(\{.*?\});/s;
-    const match = html.match(regex);
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                message: 'Query parameter is required',
+                example: '/api/search/youtube?query=your search term&limit=10'
+            });
+        }
 
-    if (!match) throw new Error("ytInitialData not found in YouTube HTML");
+        // Method 1: Using YouTube's internal API
+        const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+        
+        const response = await axios.get(searchUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
 
-    // Try to parse JSON safely
-    let jsonString = match[1];
-    // Truncate to the last complete closing brace in case of trailing junk
-    jsonString = jsonString.substring(0, jsonString.lastIndexOf("}") + 1);
-    const json = JSON.parse(jsonString);
+        const html = response.data;
+        const $ = cheerio.load(html);
+        
+        // Extract ytInitialData from the page
+        const scriptTags = $('script').toArray();
+        let ytInitialData = null;
 
-    // Navigate to results
-    let contents =
-      json.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents ||
-      json.contents?.sectionListRenderer?.contents ||
-      [];
+        for (const script of scriptTags) {
+            const content = $(script).html();
+            if (content && content.includes('var ytInitialData = ')) {
+                const match = content.match(/var ytInitialData = ({.+?});/);
+                if (match) {
+                    ytInitialData = JSON.parse(match[1]);
+                    break;
+                }
+            }
+        }
 
-    if (!contents.length) throw new Error("Could not find video list in ytInitialData");
+        if (!ytInitialData) {
+            throw new Error('Could not extract video data');
+        }
 
-    // Find itemSectionRenderer which contains actual videos
-    const section = contents.find(c => c.itemSectionRenderer);
-    const items = section?.itemSectionRenderer?.contents || [];
+        // Parse video data
+        const contents = ytInitialData.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents;
+        
+        const videos = [];
+        
+        for (const item of contents) {
+            if (item.videoRenderer && videos.length < parseInt(limit)) {
+                const video = item.videoRenderer;
+                
+                videos.push({
+                    videoId: video.videoId,
+                    title: video.title.runs[0].text,
+                    url: `https://www.youtube.com/watch?v=${video.videoId}`,
+                    thumbnail: video.thumbnail.thumbnails[video.thumbnail.thumbnails.length - 1].url,
+                    duration: video.lengthText?.simpleText || 'Live',
+                    views: video.viewCountText?.simpleText || '0 views',
+                    publishedTime: video.publishedTimeText?.simpleText || 'Unknown',
+                    channel: {
+                        name: video.ownerText?.runs[0]?.text || 'Unknown',
+                        url: video.ownerText?.runs[0]?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url 
+                            ? `https://www.youtube.com${video.ownerText.runs[0].navigationEndpoint.commandMetadata.webCommandMetadata.url}` 
+                            : null,
+                        verified: video.ownerBadges?.some(badge => 
+                            badge.metadataBadgeRenderer?.style === 'BADGE_STYLE_TYPE_VERIFIED'
+                        ) || false
+                    },
+                    description: video.detailedMetadataSnippets?.[0]?.snippetText?.runs?.map(r => r.text).join('') || ''
+                });
+            }
+        }
 
-    // Extract video data
-    const results = items
-      .filter(i => i.videoRenderer)
-      .slice(0, 10)
-      .map(i => {
-        const v = i.videoRenderer;
-        return {
-          title: v.title?.runs?.[0]?.text || "Untitled",
-          videoId: v.videoId,
-          url: `https://www.youtube.com/watch?v=${v.videoId}`,
-          thumbnail: v.thumbnail?.thumbnails?.pop()?.url || null,
-          duration: v.lengthText?.simpleText || "Live",
-          views: v.viewCountText?.simpleText || "0 views",
-          channel: v.ownerText?.runs?.[0]?.text || "Unknown",
-          publishedTime: v.publishedTimeText?.simpleText || "Unknown",
-        };
-      });
+        res.json({
+            success: true,
+            query: query,
+            results: videos.length,
+            data: videos,
+            developer: 'Ntando Mods',
+            timestamp: new Date().toISOString()
+        });
 
-    return {
-      success: true,
-      query,
-      results,
-    };
-  } catch (err) {
-    console.error("YouTube search error:", err.message);
-    return {
-      success: false,
-      query,
-      results: [],
-      error: err.message,
-    };
-  }
-}
+    } catch (error) {
+        console.error('YouTube Search Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search YouTube',
+            error: error.message,
+            developer: 'Ntando Mods'
+        });
+    }
+});
 
-// API endpoint (for Express or Vercel)
-module.exports = async (req, res) => {
-  const { q } = req.query;
+// Alternative YouTube Search using different method
+router.get('/api/search/youtube-v2', async (req, res) => {
+    try {
+        const { query, limit = 10 } = req.query;
 
-  if (!q) {
-    return res.status(400).json({
-      success: false,
-      message: "Missing query parameter ?q=",
-      example: "/search/youtube?q=nodejs tutorial",
-    });
-  }
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                message: 'Query parameter is required'
+            });
+        }
 
-  const result = await youtubeSearch(q);
-  res.json(result);
-};
+        // Using YouTube's suggest API for quick results
+        const apiUrl = `https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=${encodeURIComponent(query)}`;
+        
+        const response = await axios.get(apiUrl);
+        const suggestions = response.data[1].slice(0, parseInt(limit));
+
+        // Get video details for each suggestion
+        const videos = await Promise.all(
+            suggestions.map(async (suggestion) => {
+                try {
+                    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(suggestion)}`;
+                    const searchResponse = await axios.get(searchUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+
+                    const html = searchResponse.data;
+                    const match = html.match(/var ytInitialData = ({.+?});/);
+                    
+                    if (match) {
+                        const data = JSON.parse(match[1]);
+                        const videoRenderer = data.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents[0].videoRenderer;
+                        
+                        if (videoRenderer) {
+                            return {
+                                videoId: videoRenderer.videoId,
+                                title: videoRenderer.title.runs[0].text,
+                                url: `https://www.youtube.com/watch?v=${videoRenderer.videoId}`,
+                                thumbnail: videoRenderer.thumbnail.thumbnails[0].url
+                            };
+                        }
+                    }
+                } catch (err) {
+                    return null;
+                }
+            })
+        );
+
+        res.json({
+            success: true,
+            query: query,
+            results: videos.filter(v => v !== null).length,
+            data: videos.filter(v => v !== null),
+            developer: 'Ntando Mods'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search YouTube',
+            error: error.message
+        });
+    }
+});
+
+module.exports = router;
