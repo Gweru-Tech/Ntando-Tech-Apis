@@ -49,6 +49,11 @@
           "name": "YouTube",
           "desc": "Download YouTube videos and audio",
           "path": "/download/youtube?url="
+        },
+        {
+          "name": "YouTube Premium",
+          "desc": "Download YouTube videos in highest quality with premium features",
+          "path": "/download/youtube-premium?url="
         }
       ]
     },
@@ -79,6 +84,21 @@
           "name": "YouTube Search",
           "desc": "Search for YouTube videos",
           "path": "/search/youtube?q="
+        },
+        {
+          "name": "Lyrics",
+          "desc": "Search for song lyrics",
+          "path": "/search/lyrics?song="
+        },
+        {
+          "name": "Anime",
+          "desc": "Search for anime information",
+          "path": "/search/anime?q="
+        },
+        {
+          "name": "Movie",
+          "desc": "Search for movie information and ratings",
+          "path": "/search/movie?q="
         }
       ]
     },
@@ -94,6 +114,11 @@
           "name": "Weather",
           "desc": "Get weather information for any city",
           "path": "/tools/weather?city="
+        },
+        {
+          "name": "QR Code",
+          "desc": "Generate QR codes from text or URLs",
+          "path": "/tools/qrcode?text="
         }
       ]
     }
