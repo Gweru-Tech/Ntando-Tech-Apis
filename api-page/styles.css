@@ -607,5 +607,447 @@ body {
 
 @media (max-width: 768px) {
     .hero-content h1 {
-        font-size: 2rem
+        font-size: 2rem;
+    }
+
+    .hero-content .lead {
+        font-size: 1rem;
+    }
+
+    .features-section h2,
+    .api-section h2 {
+        font-size: 2rem;
+    }
+
+    .feature-card {
+        margin-bottom: 1rem;
+    }
+
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+
+    .btn-lg {
+        padding: 0.5rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .back-to-top {
+        bottom: 20px;
+        right: 20px;
+        width: 45px;
+        height: 45px;
+        font-size: 1rem;
+    }
+
+    .api-item {
+        padding: 1rem;
+    }
+
+    .api-item h5 {
+        font-size: 1rem;
+    }
+
+    .endpoint-badge {
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .response-container pre {
+        max-height: 300px;
+        font-size: 0.8rem;
+    }
+
+    .search-container input {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-content h1 {
+        font-size: 1.75rem;
+    }
+
+    .hero-content .lead {
+        font-size: 0.95rem;
+    }
+
+    .hero-section {
+        padding: 2rem 0;
+    }
+
+    .features-section h2,
+    .api-section h2 {
+        font-size: 1.75rem;
+    }
+
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+
+    .feature-card h4 {
+        font-size: 1.1rem;
+    }
+
+    .feature-card p {
+        font-size: 0.9rem;
+    }
+
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+
+    .stat-card i {
+        font-size: 2rem;
+    }
+
+    .api-category {
+        padding: 1.5rem;
+    }
+
+    .api-category h3 {
+        font-size: 1.5rem;
+    }
+
+    .api-item {
+        padding: 1rem;
+    }
+
+    .api-item h5 {
+        font-size: 0.95rem;
+    }
+
+    .api-item p {
+        font-size: 0.85rem;
+    }
+
+    .api-item .badge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .modal-header {
+        padding: 1rem;
+    }
+
+    .modal-title {
+        font-size: 1.1rem;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .endpoint-container input {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+
+    .response-container pre {
+        max-height: 250px;
+        padding: 0.75rem;
+    }
+
+    .response-container code {
+        font-size: 0.8rem;
+    }
+
+    .btn-primary,
+    .btn-outline-light {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .navbar-brand i {
+        font-size: 1.3rem;
+    }
+
+    .nav-link {
+        padding: 0.5rem !important;
+        font-size: 0.9rem;
+    }
+
+    .footer {
+        font-size: 0.9rem;
+    }
+
+    .footer h5,
+    .footer h6 {
+        font-size: 1rem;
+    }
+
+    .social-link {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+
+    .back-to-top {
+        bottom: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+
+    .search-container {
+        padding: 0 1rem;
+    }
+
+    .d-flex.gap-3 {
+        flex-direction: column;
+        gap: 0.75rem !important;
+    }
+
+    .d-flex.gap-3 .btn {
+        width: 100%;
+    }
+}
+
+/* ==================== Animation Classes ==================== */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.5s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.scale-in {
+    animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ==================== Utility Classes ==================== */
+.text-gradient {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.shadow-sm {
+    box-shadow: var(--shadow);
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg);
+}
+
+.rounded-lg {
+    border-radius: 15px;
+}
+
+.rounded-xl {
+    border-radius: 20px;
+}
+
+/* ==================== Loading States ==================== */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ==================== Error States ==================== */
+.error-message {
+    background: #fee;
+    border: 2px solid var(--danger-color);
+    border-radius: 10px;
+    padding: 1rem;
+    color: var(--danger-color);
+    margin: 1rem 0;
+}
+
+.success-message {
+    background: #efe;
+    border: 2px solid var(--success-color);
+    border-radius: 10px;
+    padding: 1rem;
+    color: var(--success-color);
+    margin: 1rem 0;
+}
+
+.warning-message {
+    background: #ffeaa7;
+    border: 2px solid var(--warning-color);
+    border-radius: 10px;
+    padding: 1rem;
+    color: #d97706;
+    margin: 1rem 0;
+}
+
+/* ==================== Custom Badges ==================== */
+.badge-custom {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.badge-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.badge-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.badge-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.badge-warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+/* ==================== Print Styles ==================== */
+@media print {
+    .navbar,
+    .back-to-top,
+    .footer,
+    .btn,
+    .modal {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .hero-section {
+        background: white;
+        color: black;
+    }
+}
+
+/* ==================== Accessibility ==================== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.focus-visible:focus {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* ==================== Dark Mode Support (Optional) ==================== */
+@media (prefers-color-scheme: dark) {
+    /* Add dark mode styles here if needed */
+}
+
+/* ==================== High Contrast Mode ==================== */
+@media (prefers-contrast: high) {
+    .btn-primary,
+    .btn-outline-light {
+        border: 3px solid;
+    }
+
+    .feature-card,
+    .api-item,
+    .stat-card {
+        border: 3px solid var(--dark-color);
+    }
+}
+
+/* ==================== Reduced Motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 
