@@ -1,289 +1,269 @@
 const axios = require('axios');
 
 class YouTubeSearchAPI {
-  constructor(apiKey = null) {
-    this.apiKey = apiKey;
-    this.baseURL = 'https://www.googleapis.com/youtube/v3';
-    this.alternativeAPI = 'https://yt-api.p.rapidapi.com'; // RapidAPI alternative
-    this.rapidAPIKey = null;
+  constructor() {
+    this.invidiousInstances = [
+      'https://vid.puffyan.us',
+      'https://invidious.snopyta.org',
+      'https://yewtu.be',
+      'https://invidious.kavin.rocks',
+      'https://inv.riverside.rocks'
+    ];
+    this.currentInstance = 0;
   }
 
   /**
-   * Set RapidAPI key for alternative access
-   * @param {string} key - RapidAPI key
+   * Get next working Invidious instance
    */
-  setRapidAPIKey(key) {
-    this.rapidAPIKey = key;
+  getNextInstance() {
+    const instance = this.invidiousInstances[this.currentInstance];
+    this.currentInstance = (this.currentInstance + 1) % this.invidiousInstances.length;
+    return instance;
   }
 
   /**
-   * Search for YouTube videos using official API
+   * Search for YouTube videos
    * @param {string} query - Search query
-   * @param {number} maxResults - Maximum number of results (default: 10)
-   * @param {string} order - Order of results
+   * @param {number} maxResults - Maximum number of results
    * @returns {Promise<Object>} Search results
    */
-  async searchVideos(query, maxResults = 10, order = 'relevance') {
-    if (!this.apiKey && !this.rapidAPIKey) {
-      return await this.searchVideosNoAPI(query, maxResults);
-    }
+  async searchVideos(query, maxResults = 10) {
+    let lastError;
+    
+    // Try each instance
+    for (let i = 0; i < this.invidiousInstances.length; i++) {
+      try {
+        const instance = this.getNextInstance();
+        const response = await axios.get(`${instance}/api/v1/search`, {
+          params: {
+            q: query,
+            type: 'video',
+            sort_by: 'relevance'
+          },
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        });
 
-    try {
-      if (this.apiKey) {
-        return await this.searchWithGoogleAPI(query, maxResults, order);
-      } else if (this.rapidAPIKey) {
-        return await this.searchWithRapidAPI(query, maxResults);
+        if (!response.data || response.data.length === 0) {
+          continue;
+        }
+
+        const results = response.data.slice(0, maxResults);
+
+        return {
+          success: true,
+          results: results.map(item => ({
+            videoId: item.videoId,
+            title: item.title,
+            description: item.description || item.descriptionHtml || '',
+            channelTitle: item.author,
+            channelId: item.authorId,
+            publishedAt: item.publishedText || '',
+            duration: this.formatDuration(item.lengthSeconds),
+            viewCount: item.viewCount || 0,
+            thumbnail: {
+              default: `https://i.ytimg.com/vi/${item.videoId}/default.jpg`,
+              medium: `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`,
+              high: `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`,
+              maxres: `https://i.ytimg.com/vi/${item.videoId}/maxresdefault.jpg`
+            },
+            url: `https://www.youtube.com/watch?v=${item.videoId}`,
+            embedUrl: `https://www.youtube.com/embed/${item.videoId}`
+          })),
+          totalResults: results.length,
+          source: instance
+        };
+      } catch (error) {
+        lastError = error;
+        console.log(`Instance ${this.invidiousInstances[i]} failed, trying next...`);
+        continue;
       }
-    } catch (error) {
-      console.error('Primary search failed, trying alternative:', error.message);
-      return await this.searchVideosNoAPI(query, maxResults);
     }
-  }
 
-  /**
-   * Search using Google YouTube API
-   */
-  async searchWithGoogleAPI(query, maxResults, order) {
-    try {
-      const response = await axios.get(`${this.baseURL}/search`, {
-        params: {
-          part: 'snippet',
-          q: query,
-          type: 'video',
-          maxResults: maxResults,
-          order: order,
-          key: this.apiKey
-        },
-        timeout: 10000
-      });
-
-      return {
-        success: true,
-        results: response.data.items.map(item => ({
-          videoId: item.id.videoId,
-          title: item.snippet.title,
-          description: item.snippet.description,
-          channelTitle: item.snippet.channelTitle,
-          channelId: item.snippet.channelId,
-          publishedAt: item.snippet.publishedAt,
-          thumbnail: {
-            default: item.snippet.thumbnails.default?.url,
-            medium: item.snippet.thumbnails.medium?.url,
-            high: item.snippet.thumbnails.high?.url
-          },
-          url: `https://www.youtube.com/watch?v=${item.id.videoId}`
-        })),
-        totalResults: response.data.pageInfo?.totalResults || 0
-      };
-    } catch (error) {
-      throw new Error(`Google API Error: ${error.response?.data?.error?.message || error.message}`);
-    }
-  }
-
-  /**
-   * Search using RapidAPI
-   */
-  async searchWithRapidAPI(query, maxResults) {
-    try {
-      const response = await axios.get(`${this.alternativeAPI}/search`, {
-        params: {
-          query: query,
-          max_results: maxResults
-        },
-        headers: {
-          'X-RapidAPI-Key': this.rapidAPIKey,
-          'X-RapidAPI-Host': 'yt-api.p.rapidapi.com'
-        },
-        timeout: 10000
-      });
-
-      return {
-        success: true,
-        results: response.data.data.map(item => ({
-          videoId: item.videoId,
-          title: item.title,
-          description: item.description || '',
-          channelTitle: item.channelTitle,
-          channelId: item.channelId,
-          publishedAt: item.publishedTimeText,
-          thumbnail: {
-            default: item.thumbnail?.[0]?.url,
-            medium: item.thumbnail?.[1]?.url,
-            high: item.thumbnail?.[2]?.url || item.thumbnail?.[0]?.url
-          },
-          url: `https://www.youtube.com/watch?v=${item.videoId}`
-        })),
-        totalResults: response.data.data.length
-      };
-    } catch (error) {
-      throw new Error(`RapidAPI Error: ${error.message}`);
-    }
-  }
-
-  /**
-   * Search without API (scraping alternative - use with caution)
-   */
-  async searchVideosNoAPI(query, maxResults) {
-    try {
-      // Using invidious public API as fallback
-      const response = await axios.get(`https://invidious.snopyta.org/api/v1/search`, {
-        params: {
-          q: query,
-          type: 'video'
-        },
-        timeout: 10000
-      });
-
-      const results = response.data.slice(0, maxResults);
-
-      return {
-        success: true,
-        results: results.map(item => ({
-          videoId: item.videoId,
-          title: item.title,
-          description: item.description || '',
-          channelTitle: item.author,
-          channelId: item.authorId,
-          publishedAt: new Date(item.published * 1000).toISOString(),
-          thumbnail: {
-            default: item.videoThumbnails?.[0]?.url,
-            medium: item.videoThumbnails?.[2]?.url,
-            high: item.videoThumbnails?.[4]?.url
-          },
-          url: `https://www.youtube.com/watch?v=${item.videoId}`
-        })),
-        totalResults: results.length
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: `All search methods failed: ${error.message}`
-      };
-    }
+    return {
+      success: false,
+      error: `All instances failed. Last error: ${lastError?.message || 'Unknown error'}`
+    };
   }
 
   /**
    * Get video details by ID
+   * @param {string} videoId - YouTube video ID
+   * @returns {Promise<Object>} Video details
    */
   async getVideoDetails(videoId) {
-    if (!this.apiKey) {
-      return await this.getVideoDetailsNoAPI(videoId);
-    }
+    let lastError;
 
-    try {
-      const response = await axios.get(`${this.baseURL}/videos`, {
-        params: {
-          part: 'snippet,contentDetails,statistics',
-          id: videoId,
-          key: this.apiKey
-        },
-        timeout: 10000
-      });
+    for (let i = 0; i < this.invidiousInstances.length; i++) {
+      try {
+        const instance = this.getNextInstance();
+        const response = await axios.get(`${instance}/api/v1/videos/${videoId}`, {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        });
 
-      if (response.data.items.length === 0) {
+        const video = response.data;
+
         return {
-          success: false,
-          error: 'Video not found'
+          success: true,
+          video: {
+            videoId: video.videoId,
+            title: video.title,
+            description: video.description,
+            channelTitle: video.author,
+            channelId: video.authorId,
+            publishedAt: new Date(video.published * 1000).toISOString(),
+            duration: this.formatDuration(video.lengthSeconds),
+            viewCount: video.viewCount,
+            likeCount: video.likeCount,
+            dislikeCount: video.dislikeCount,
+            thumbnail: {
+              default: `https://i.ytimg.com/vi/${videoId}/default.jpg`,
+              medium: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+              high: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+              maxres: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
+            },
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            embedUrl: `https://www.youtube.com/embed/${videoId}`,
+            source: instance
+          }
         };
+      } catch (error) {
+        lastError = error;
+        continue;
       }
-
-      const video = response.data.items[0];
-      return {
-        success: true,
-        video: {
-          videoId: video.id,
-          title: video.snippet.title,
-          description: video.snippet.description,
-          channelTitle: video.snippet.channelTitle,
-          channelId: video.snippet.channelId,
-          publishedAt: video.snippet.publishedAt,
-          duration: video.contentDetails.duration,
-          viewCount: video.statistics.viewCount,
-          likeCount: video.statistics.likeCount,
-          commentCount: video.statistics.commentCount,
-          thumbnail: video.snippet.thumbnails.high?.url,
-          url: `https://www.youtube.com/watch?v=${video.id}`
-        }
-      };
-    } catch (error) {
-      return await this.getVideoDetailsNoAPI(videoId);
     }
-  }
 
-  /**
-   * Get video details without API
-   */
-  async getVideoDetailsNoAPI(videoId) {
-    try {
-      const response = await axios.get(`https://invidious.snopyta.org/api/v1/videos/${videoId}`, {
-        timeout: 10000
-      });
-
-      const video = response.data;
-      return {
-        success: true,
-        video: {
-          videoId: video.videoId,
-          title: video.title,
-          description: video.description,
-          channelTitle: video.author,
-          channelId: video.authorId,
-          publishedAt: new Date(video.published * 1000).toISOString(),
-          duration: `PT${video.lengthSeconds}S`,
-          viewCount: video.viewCount,
-          likeCount: video.likeCount,
-          thumbnail: video.videoThumbnails?.[4]?.url,
-          url: `https://www.youtube.com/watch?v=${video.videoId}`
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
+    return {
+      success: false,
+      error: `Failed to get video details: ${lastError?.message || 'Unknown error'}`
+    };
   }
 
   /**
    * Search for music videos
+   * @param {string} songName - Song name
+   * @param {string} artistName - Artist name
+   * @returns {Promise<Object>} Music search results
    */
   async searchMusic(songName, artistName = '') {
-    const query = artistName ? `${songName} ${artistName} official audio` : `${songName} official audio`;
-    return await this.searchVideos(query, 5, 'relevance');
+    const query = artistName 
+      ? `${songName} ${artistName} official audio` 
+      : `${songName} official audio`;
+    return await this.searchVideos(query, 10);
   }
 
   /**
    * Get trending videos
+   * @param {string} type - Type of trending (music, gaming, movies, news)
+   * @returns {Promise<Object>} Trending videos
    */
-  async getTrendingVideos(regionCode = 'US', maxResults = 10) {
-    try {
-      const response = await axios.get(`https://invidious.snopyta.org/api/v1/trending`, {
-        params: {
-          region: regionCode
-        },
-        timeout: 10000
-      });
+  async getTrendingVideos(type = 'default') {
+    let lastError;
 
-      const results = response.data.slice(0, maxResults);
+    for (let i = 0; i < this.invidiousInstances.length; i++) {
+      try {
+        const instance = this.getNextInstance();
+        const response = await axios.get(`${instance}/api/v1/trending`, {
+          params: type !== 'default' ? { type: type } : {},
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        });
 
-      return {
-        success: true,
-        results: results.map(item => ({
-          videoId: item.videoId,
-          title: item.title,
-          description: item.description || '',
-          channelTitle: item.author,
-          viewCount: item.viewCount,
-          thumbnail: item.videoThumbnails?.[4]?.url,
-          url: `https://www.youtube.com/watch?v=${item.videoId}`
-        }))
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
+        return {
+          success: true,
+          results: response.data.slice(0, 20).map(item => ({
+            videoId: item.videoId,
+            title: item.title,
+            description: item.description || '',
+            channelTitle: item.author,
+            channelId: item.authorId,
+            viewCount: item.viewCount,
+            publishedAt: item.publishedText,
+            thumbnail: {
+              default: `https://i.ytimg.com/vi/${item.videoId}/default.jpg`,
+              medium: `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`,
+              high: `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
+            },
+            url: `https://www.youtube.com/watch?v=${item.videoId}`
+          })),
+          source: instance
+        };
+      } catch (error) {
+        lastError = error;
+        continue;
+      }
     }
+
+    return {
+      success: false,
+      error: `Failed to get trending videos: ${lastError?.message || 'Unknown error'}`
+    };
+  }
+
+  /**
+   * Format duration from seconds to readable format
+   * @param {number} seconds - Duration in seconds
+   * @returns {string} Formatted duration
+   */
+  formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Get channel videos
+   * @param {string} channelId - YouTube channel ID
+   * @returns {Promise<Object>} Channel videos
+   */
+  async getChannelVideos(channelId) {
+    let lastError;
+
+    for (let i = 0; i < this.invidiousInstances.length; i++) {
+      try {
+        const instance = this.getNextInstance();
+        const response = await axios.get(`${instance}/api/v1/channels/${channelId}/videos`, {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        });
+
+        return {
+          success: true,
+          videos: response.data.map(item => ({
+            videoId: item.videoId,
+            title: item.title,
+            description: item.description || '',
+            publishedAt: item.publishedText,
+            viewCount: item.viewCount,
+            thumbnail: `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`,
+            url: `https://www.youtube.com/watch?v=${item.videoId}`
+          })),
+          source: instance
+        };
+      } catch (error) {
+        lastError = error;
+        continue;
+      }
+    }
+
+    return {
+      success: false,
+      error: `Failed to get channel videos: ${lastError?.message || 'Unknown error'}`
+    };
   }
 }
 
