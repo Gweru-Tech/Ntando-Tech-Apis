@@ -1,204 +1,198 @@
-// youtube-search-api.js
-const express = require('express');
 const axios = require('axios');
-const router = express.Router();
 
-// YouTube Search API - Working Version
-router.get('/api/search/youtube', async (req, res) => {
+class YouTubeSearchAPI {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://www.googleapis.com/youtube/v3';
+  }
+
+  /**
+   * Search for YouTube videos
+   * @param {string} query - Search query
+   * @param {number} maxResults - Maximum number of results (default: 10)
+   * @param {string} order - Order of results (relevance, date, rating, viewCount, title)
+   * @returns {Promise<Object>} Search results
+   */
+  async searchVideos(query, maxResults = 10, order = 'relevance') {
     try {
-        const { query, limit = 10 } = req.query;
-
-        if (!query) {
-            return res.status(400).json({
-                success: false,
-                message: 'Query parameter is required',
-                example: '/api/search/youtube?query=your search term&limit=10',
-                developer: 'Ntando Mods'
-            });
+      const response = await axios.get(`${this.baseURL}/search`, {
+        params: {
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          maxResults: maxResults,
+          order: order,
+          key: this.apiKey
         }
+      });
 
-        // Using YouTube's internal API endpoint
-        const apiKey = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'; // Public YouTube API key
-        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${limit}&type=video&key=${apiKey}`;
-
-        const response = await axios.get(searchUrl);
-        
-        if (!response.data.items || response.data.items.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No videos found',
-                query: query,
-                developer: 'Ntando Mods'
-            });
-        }
-
-        // Get video statistics
-        const videoIds = response.data.items.map(item => item.id.videoId).join(',');
-        const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${videoIds}&key=${apiKey}`;
-        const statsResponse = await axios.get(statsUrl);
-
-        const videos = response.data.items.map((item, index) => {
-            const stats = statsResponse.data.items[index];
-            
-            return {
-                videoId: item.id.videoId,
-                title: item.snippet.title,
-                url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-                thumbnail: {
-                    default: item.snippet.thumbnails.default.url,
-                    medium: item.snippet.thumbnails.medium.url,
-                    high: item.snippet.thumbnails.high.url,
-                    maxres: item.snippet.thumbnails.maxres?.url || item.snippet.thumbnails.high.url
-                },
-                duration: stats?.contentDetails?.duration || 'Unknown',
-                views: stats?.statistics?.viewCount || '0',
-                likes: stats?.statistics?.likeCount || '0',
-                publishedAt: item.snippet.publishedAt,
-                publishedTime: formatPublishedTime(item.snippet.publishedAt),
-                channel: {
-                    name: item.snippet.channelTitle,
-                    channelId: item.snippet.channelId,
-                    url: `https://www.youtube.com/channel/${item.snippet.channelId}`
-                },
-                description: item.snippet.description
-            };
-        });
-
-        res.json({
-            success: true,
-            query: query,
-            results: videos.length,
-            data: videos,
-            developer: 'Ntando Mods',
-            api: 'YouTube Search API v1',
-            timestamp: new Date().toISOString()
-        });
-
+      return {
+        success: true,
+        results: response.data.items.map(item => ({
+          videoId: item.id.videoId,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          channelTitle: item.snippet.channelTitle,
+          channelId: item.snippet.channelId,
+          publishedAt: item.snippet.publishedAt,
+          thumbnail: {
+            default: item.snippet.thumbnails.default.url,
+            medium: item.snippet.thumbnails.medium.url,
+            high: item.snippet.thumbnails.high.url
+          },
+          url: `https://www.youtube.com/watch?v=${item.id.videoId}`
+        })),
+        totalResults: response.data.pageInfo.totalResults
+      };
     } catch (error) {
-        console.error('YouTube Search Error:', error.response?.data || error.message);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to search YouTube',
-            error: error.response?.data?.error?.message || error.message,
-            developer: 'Ntando Mods'
-        });
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
     }
-});
+  }
 
-// Alternative YouTube Search without API Key (Web Scraping)
-router.get('/api/search/youtube-scrape', async (req, res) => {
+  /**
+   * Get video details by ID
+   * @param {string} videoId - YouTube video ID
+   * @returns {Promise<Object>} Video details
+   */
+  async getVideoDetails(videoId) {
     try {
-        const { query, limit = 10 } = req.query;
-
-        if (!query) {
-            return res.status(400).json({
-                success: false,
-                message: 'Query parameter is required',
-                developer: 'Ntando Mods'
-            });
+      const response = await axios.get(`${this.baseURL}/videos`, {
+        params: {
+          part: 'snippet,contentDetails,statistics',
+          id: videoId,
+          key: this.apiKey
         }
+      });
 
-        // Using yt-search npm package alternative
-        const searchUrl = `https://youtube.com/results?search_query=${encodeURIComponent(query)}`;
-        
-        const response = await axios.get(searchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
-        });
+      if (response.data.items.length === 0) {
+        return {
+          success: false,
+          error: 'Video not found'
+        };
+      }
 
-        const data = response.data;
-        
-        // Extract ytInitialData
-        const ytInitialDataMatch = data.match(/var ytInitialData = ({.*?});/s);
-        
-        if (!ytInitialDataMatch) {
-            throw new Error('Could not extract video data from YouTube');
+      const video = response.data.items[0];
+      return {
+        success: true,
+        video: {
+          videoId: video.id,
+          title: video.snippet.title,
+          description: video.snippet.description,
+          channelTitle: video.snippet.channelTitle,
+          channelId: video.snippet.channelId,
+          publishedAt: video.snippet.publishedAt,
+          duration: video.contentDetails.duration,
+          viewCount: video.statistics.viewCount,
+          likeCount: video.statistics.likeCount,
+          commentCount: video.statistics.commentCount,
+          thumbnail: video.snippet.thumbnails.high.url,
+          url: `https://www.youtube.com/watch?v=${video.id}`
         }
-
-        const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
-        
-        const contents = ytInitialData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
-        
-        const videos = [];
-        
-        for (const section of contents) {
-            const items = section?.itemSectionRenderer?.contents || [];
-            
-            for (const item of items) {
-                if (item.videoRenderer && videos.length < parseInt(limit)) {
-                    const video = item.videoRenderer;
-                    
-                    videos.push({
-                        videoId: video.videoId,
-                        title: video.title?.runs?.[0]?.text || 'Unknown',
-                        url: `https://www.youtube.com/watch?v=${video.videoId}`,
-                        thumbnail: video.thumbnail?.thumbnails?.[video.thumbnail.thumbnails.length - 1]?.url || '',
-                        duration: video.lengthText?.simpleText || 'Live',
-                        views: video.viewCountText?.simpleText || '0 views',
-                        publishedTime: video.publishedTimeText?.simpleText || 'Unknown',
-                        channel: {
-                            name: video.ownerText?.runs?.[0]?.text || 'Unknown',
-                            channelId: video.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.navigationEndpoint?.browseEndpoint?.browseId || '',
-                            url: `https://www.youtube.com${video.ownerText?.runs?.[0]?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || ''}`,
-                            verified: video.ownerBadges?.some(badge => 
-                                badge.metadataBadgeRenderer?.style === 'BADGE_STYLE_TYPE_VERIFIED'
-                            ) || false,
-                            thumbnail: video.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail?.thumbnails?.[0]?.url || ''
-                        },
-                        description: video.detailedMetadataSnippets?.[0]?.snippetText?.runs?.map(r => r.text).join('') || ''
-                    });
-                }
-            }
-        }
-
-        if (videos.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No videos found',
-                query: query,
-                developer: 'Ntando Mods'
-            });
-        }
-
-        res.json({
-            success: true,
-            query: query,
-            results: videos.length,
-            data: videos,
-            developer: 'Ntando Mods',
-            api: 'YouTube Search API v2 (Scrape)',
-            timestamp: new Date().toISOString()
-        });
-
+      };
     } catch (error) {
-        console.error('YouTube Scrape Error:', error.message);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to search YouTube',
-            error: error.message,
-            developer: 'Ntando Mods'
-        });
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
     }
-});
+  }
 
-// Helper function to format published time
-function formatPublishedTime(publishedAt) {
-    const now = new Date();
-    const published = new Date(publishedAt);
-    const diffMs = now - published;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    const diffMonths = Math.floor(diffMs / 2592000000);
-    const diffYears = Math.floor(diffMs / 31536000000);
+  /**
+   * Search for music videos
+   * @param {string} songName - Song name
+   * @param {string} artistName - Artist name (optional)
+   * @returns {Promise<Object>} Music search results
+   */
+  async searchMusic(songName, artistName = '') {
+    const query = artistName ? `${songName} ${artistName} official audio` : `${songName} official audio`;
+    return await this.searchVideos(query, 5, 'relevance');
+  }
 
-    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
-    return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+  /**
+   * Get trending videos
+   * @param {string} regionCode - Region code (e.g., 'US', 'GB')
+   * @param {number} maxResults - Maximum number of results
+   * @returns {Promise<Object>} Trending videos
+   */
+  async getTrendingVideos(regionCode = 'US', maxResults = 10) {
+    try {
+      const response = await axios.get(`${this.baseURL}/videos`, {
+        params: {
+          part: 'snippet,statistics',
+          chart: 'mostPopular',
+          regionCode: regionCode,
+          maxResults: maxResults,
+          key: this.apiKey
+        }
+      });
+
+      return {
+        success: true,
+        results: response.data.items.map(item => ({
+          videoId: item.id,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          channelTitle: item.snippet.channelTitle,
+          viewCount: item.statistics.viewCount,
+          likeCount: item.statistics.likeCount,
+          thumbnail: item.snippet.thumbnails.high.url,
+          url: `https://www.youtube.com/watch?v=${item.id}`
+        }))
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
+    }
+  }
+
+  /**
+   * Get channel information
+   * @param {string} channelId - YouTube channel ID
+   * @returns {Promise<Object>} Channel details
+   */
+  async getChannelInfo(channelId) {
+    try {
+      const response = await axios.get(`${this.baseURL}/channels`, {
+        params: {
+          part: 'snippet,statistics,contentDetails',
+          id: channelId,
+          key: this.apiKey
+        }
+      });
+
+      if (response.data.items.length === 0) {
+        return {
+          success: false,
+          error: 'Channel not found'
+        };
+      }
+
+      const channel = response.data.items[0];
+      return {
+        success: true,
+        channel: {
+          channelId: channel.id,
+          title: channel.snippet.title,
+          description: channel.snippet.description,
+          subscriberCount: channel.statistics.subscriberCount,
+          videoCount: channel.statistics.videoCount,
+          viewCount: channel.statistics.viewCount,
+          thumbnail: channel.snippet.thumbnails.high.url,
+          url: `https://www.youtube.com/channel/${channel.id}`
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
+    }
+  }
 }
 
-module.exports = router;
+module.exports = YouTubeSearchAPI;
