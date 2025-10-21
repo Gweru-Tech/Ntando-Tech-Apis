@@ -43,27 +43,30 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "axios": "^1.6.8",
-    "body-parser": "^1.20.3",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.5",
-    "chalk": "^4.1.2",
-    "express": "^4.19.2",
-    "node-fetch": "^2.7.0",
-    "yt-search": "^2.12.1",
-    "form-data": "^4.0.0",
-    "@distube/ytdl-core": "^4.13.0",
+    "@distube/ytdl-core": "^4.14.4",
     "@google/generative-ai": "^0.21.0",
-    "qrcode": "^1.5.3",
-    "ytdl-core": "^4.11.5",
-    "youtube-dl-exec": "^2.4.0",
-    "dotenv": "^16.4.5",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
+    "axios": "^1.7.7",
+    "body-parser": "^1.20.3",
+    "chalk": "^4.1.2",
+    "cheerio": "^1.0.0",
     "compression": "^1.7.4",
-    "morgan": "^1.10.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "form-data": "^4.0.1",
+    "helmet": "^8.0.0",
+    "https-proxy-agent": "^7.0.5",
+    "morgan": "^1.10.0",
+    "node-fetch": "^2.7.0",
+    "qrcode": "^1.5.4",
+    "yt-search": "^2.12.1",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.1.7"
+  },
+  "optionalDependencies": {
+    "youtube-dl-exec": "^2.4.0"
   }
 }
