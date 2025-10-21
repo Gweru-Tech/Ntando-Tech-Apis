@@ -1,91 +1,180 @@
-const axios = require("axios");
+const ytdl = require('@distube/ytdl-core');
+const axios = require('axios');
 
-async function youtubeSearch(query) {
+// Backup method using external API
+async function downloadWithBackup(url) {
   try {
-    // Fetch the raw YouTube search HTML
-    const response = await axios.get(
-      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
+    const response = await axios.post('https://api.cobalt.tools/api/json', {
+      url: url,
+      vCodec: 'h264',
+      vQuality: '720',
+      aFormat: 'mp3',
+      isAudioOnly: false
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       }
-    );
-
-    const html = response.data;
-
-    // Match the ytInitialData object (new YouTube format)
-    const regex = /(?:var|window\[")ytInitialData(?:"])?\s*=\s*(\{.*?\});/s;
-    const match = html.match(regex);
-
-    if (!match) throw new Error("ytInitialData not found in YouTube HTML");
-
-    // Try to parse JSON safely
-    let jsonString = match[1];
-    // Truncate to the last complete closing brace in case of trailing junk
-    jsonString = jsonString.substring(0, jsonString.lastIndexOf("}") + 1);
-    const json = JSON.parse(jsonString);
-
-    // Navigate to results
-    let contents =
-      json.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents ||
-      json.contents?.sectionListRenderer?.contents ||
-      [];
-
-    if (!contents.length) throw new Error("Could not find video list in ytInitialData");
-
-    // Find itemSectionRenderer which contains actual videos
-    const section = contents.find(c => c.itemSectionRenderer);
-    const items = section?.itemSectionRenderer?.contents || [];
-
-    // Extract video data
-    const results = items
-      .filter(i => i.videoRenderer)
-      .slice(0, 10)
-      .map(i => {
-        const v = i.videoRenderer;
-        return {
-          title: v.title?.runs?.[0]?.text || "Untitled",
-          videoId: v.videoId,
-          url: `https://www.youtube.com/watch?v=${v.videoId}`,
-          thumbnail: v.thumbnail?.thumbnails?.pop()?.url || null,
-          duration: v.lengthText?.simpleText || "Live",
-          views: v.viewCountText?.simpleText || "0 views",
-          channel: v.ownerText?.runs?.[0]?.text || "Unknown",
-          publishedTime: v.publishedTimeText?.simpleText || "Unknown",
-        };
-      });
+    });
 
     return {
       success: true,
-      query,
-      results,
+      method: 'cobalt',
+      data: response.data
     };
-  } catch (err) {
-    console.error("YouTube search error:", err.message);
-    return {
-      success: false,
-      query,
-      results: [],
-      error: err.message,
-    };
+  } catch (error) {
+    throw new Error('Backup method failed: ' + error.message);
   }
 }
 
-// API endpoint (for Express or Vercel)
-module.exports = async (req, res) => {
-  const { q } = req.query;
+// Primary method using ytdl-core
+async function youtubeDownloader(url) {
+  try {
+    // Validate URL
+    if (!ytdl.validateURL(url)) {
+      return {
+        success: false,
+        error: 'Invalid YouTube URL'
+      };
+    }
 
-  if (!q) {
+    // Get video info
+    const info = await ytdl.getInfo(url);
+    
+    // Filter formats
+    const videoFormats = info.formats
+      .filter(f => f.hasVideo && f.hasAudio)
+      .sort((a, b) => b.bitrate - a.bitrate)
+      .slice(0, 5);
+
+    const audioFormats = info.formats
+      .filter(f => f.hasAudio && !f.hasVideo)
+      .sort((a, b) => b.audioBitrate - a.audioBitrate)
+      .slice(0, 3);
+
+    const videoOnlyFormats = info.formats
+      .filter(f => f.hasVideo && !f.hasAudio)
+      .sort((a, b) => b.bitrate - a.bitrate)
+      .slice(0, 3);
+
+    return {
+      success: true,
+      creator: "Ntando Mods - Ladybug🐞",
+      method: 'ytdl-core',
+      data: {
+        videoId: info.videoDetails.videoId,
+        title: info.videoDetails.title,
+        duration: info.videoDetails.lengthSeconds,
+        durationFormatted: formatDuration(info.videoDetails.lengthSeconds),
+        thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
+        author: {
+          name: info.videoDetails.author.name,
+          channel_url: info.videoDetails.author.channel_url,
+          verified: info.videoDetails.author.verified
+        },
+        views: parseInt(info.videoDetails.viewCount).toLocaleString(),
+        uploadDate: info.videoDetails.uploadDate,
+        description: info.videoDetails.description.substring(0, 200) + '...',
+        likes: info.videoDetails.likes,
+        formats: {
+          videoAndAudio: videoFormats.map(f => ({
+            quality: f.qualityLabel || 'unknown',
+            url: f.url,
+            mimeType: f.mimeType,
+            container: f.container,
+            size: formatBytes(f.contentLength),
+            fps: f.fps,
+            bitrate: f.bitrate
+          })),
+          audioOnly: audioFormats.map(f => ({
+            quality: `${f.audioBitrate}kbps`,
+            url: f.url,
+            mimeType: f.mimeType,
+            size: formatBytes(f.contentLength),
+            audioBitrate: f.audioBitrate
+          })),
+          videoOnly: videoOnlyFormats.map(f => ({
+            quality: f.qualityLabel || 'unknown',
+            url: f.url,
+            mimeType: f.mimeType,
+            size: formatBytes(f.contentLength),
+            fps: f.fps
+          }))
+        },
+        downloadLinks: {
+          video720p: videoFormats.find(f => f.qualityLabel === '720p')?.url || null,
+          video480p: videoFormats.find(f => f.qualityLabel === '480p')?.url || null,
+          video360p: videoFormats.find(f => f.qualityLabel === '360p')?.url || null,
+          audioHigh: audioFormats[0]?.url || null,
+          audioMedium: audioFormats[1]?.url || null
+        }
+      }
+    };
+  } catch (error) {
+    console.error('Primary method failed:', error.message);
+    
+    // Try backup method
+    try {
+      return await downloadWithBackup(url);
+    } catch (backupError) {
+      return {
+        success: false,
+        error: 'Both download methods failed',
+        details: {
+          primary: error.message,
+          backup: backupError.message
+        }
+      };
+    }
+  }
+}
+
+// Helper functions
+function formatDuration(seconds) {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return 'Unknown';
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+module.exports = async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
     return res.status(400).json({
       success: false,
-      message: "Missing query parameter ?q=",
-      example: "/search/youtube?q=nodejs tutorial",
+      message: 'URL parameter is required',
+      example: '/download/youtube?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      creator: "Ntando Mods - Ladybug🐞",
+      documentation: {
+        endpoint: '/download/youtube',
+        method: 'GET',
+        parameters: {
+          url: 'YouTube video URL (required)'
+        }
+      }
     });
   }
 
-  const result = await youtubeSearch(q);
-  res.json(result);
+  try {
+    const result = await youtubeDownloader(url);
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    });
+  }
 };
