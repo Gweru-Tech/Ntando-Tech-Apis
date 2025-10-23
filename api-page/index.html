@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ladybug🐞 APIs - Interactive Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .link-btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+            font-weight: 500;
+        }
+
+        .link-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-title {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-icon {
+            font-size: 1.3em;
+        }
+
+        .api-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .api-item:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .api-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .api-desc {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .api-path {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: transform 0.3s;
+        }
+
+        .close-btn:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-title {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .test-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .response-container {
+            margin-top: 25px;
+            display: none;
+        }
+
+        .response-container.active {
+            display: block;
+        }
+
+        .response-title {
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .response-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .response-json {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #333;
+        }
+
+        .error {
+            background: #ffe6e6;
+            border-left: 4px solid #ff4757;
+            padding: 15px;
+            border-radius: 5px;
+            color: #d63031;
+        }
+
+        .success {
+            background: #e6ffe6;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            color: #27ae60;
+        }
+
+        .endpoint-display {
+            background: #2d3436;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+
+        footer {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .categories {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="http://Ntandomods-cdn.vercel.app/file/c0m040.png" alt="Ladybug Logo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🐞%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="status">🐞🐞🐞 ONLINE</div>
+            <h1>Ladybug🐞 APIs</h1>
+            <p class="subtitle">Interactive API Testing Platform</p>
+            <p style="color: #888; margin-bottom: 20px;">These APIs are only for Ladybug 🐞 bot project. For commercial use, contact us.</p>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalApis">0</div>
+                    <div class="stat-label">Total APIs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCategories">0</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+            </div>
+
+            <div class="links">
+                <a href="https://github.com/Ntando-Modder" class="link-btn" target="_blank">👤 Profile</a>
+                <a href="https://wa.me/263777124998" class="link-btn" target="_blank">📱 Contact Me</a>
+            </div>
+        </header>
+
+        <div class="categories" id="categoriesContainer"></div>
+
+        <footer>
+            <p><strong>Creator:</strong> Ntando Mods</p>
+            <p style="margin-top: 10px;">© 2024 Ladybug🐞 APIs. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Modal for API Testing -->
+    <div class="modal" id="apiModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">×</button>
+            <h2 class="modal-title" id="modalTitle"></h2>
+            <p id="modalDesc" style="color: #666; margin-bottom: 20px;"></p>
+            
+            <div class="endpoint-display" id="endpointDisplay"></div>
+
+            <div id="inputContainer"></div>
+
+            <button class="test-btn" id="testBtn" onclick="testAPI()">🚀 Test API</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #667eea;">Processing request...</p>
+            </div>
+
+            <div class="response-container" id="responseContainer">
+                <h3 class="response-title">📊 Response</h3>
+                <div class="response-box">
+                    <button class="copy-btn" onclick="copyResponse()">📋 Copy</button>
+                    <pre class="response-json" id="responseJSON"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let settingsData = null;
+        let currentAPI = null;
+
+        // Fetch settings and initialize
+        async function init() {
+            try {
+                const response = await fetch('/');
+                settingsData = await response.json();
+                renderCategories();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                document.getElementById('categoriesContainer').innerHTML = 
+                    '<div class="error">Error loading API data. Please refresh the page.</div>';
+            }
+        }
+
+        function updateStats() {
+            let totalApis = 0;
+            settingsData.categories.forEach(cat => {
+                totalApis += cat.items.length;
+            });
+            document.getElementById('totalApis').textContent = totalApis;
+            document.getElementById('totalCategories').textContent = settingsData.categories.length;
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoriesContainer');
+            
+            const icons = {
+                'Download': '⬇️',
+                'AI': '🤖',
+                'Search': '🔍',
+                'Tools': '🛠️'
+            };
+
+            settingsData.categories.forEach(category => {
+                const categoryCard = document.createElement('div');
+                categoryCard.className = 'category-card';
+                
+                let itemsHTML = '';
+                category.items.forEach(item => {
+                    itemsHTML += `
+                        <div class="api-item" onclick='openModal(${JSON.stringify(item)})'>
+                            <div class="api-name">${item.name}</div>
+                            <div class="api-desc">${item.desc}</div>
+                            <div class="api-path">${item.path}</div>
+                        </div>
+                    `;
+                });
+
+                categoryCard.innerHTML = `
+                    <h2 class="category-title">
+                        <span class="category-icon">${icons[category.name] || '📁'}</span>
+                        ${category.name}
+                    </h2>
+                    ${itemsHTML}
+                `;
+
+                container.appendChild(categoryCard);
+            });
+        }
+
+        function openModal(api) {
+            currentAPI = api;
+            const modal = document.getElementById('apiModal');
+            
+            document.getElementById('modalTitle').textContent = api.name;
+            document.getElementById('modalDesc').textContent = api.desc;
+            
+            // Parse path to get parameter name
+            const paramMatch = api.path.match(/\?(.+)=/);
+            const paramName = paramMatch ? paramMatch[1] : 'input';
+            
+            document.getElementById('endpointDisplay').textContent = 
+                `GET $${window.location.origin}$$ {api.path}[VALUE]`;
+
+            // Create input field
+            const inputContainer = document.getElementById('inputContainer');
+            inputContainer.innerHTML = `
+                <div class="input-group">
+                    <label class="input-label">${paramName.toUpperCase()}</label>
+                    <input type="text" 
+                           class="input-field" 
+                           id="apiInput" 
+                           placeholder="Enter ${paramName}..."
+                           onkeypress="handleEnter(event)">
+                </div>
+            `;
+
+            // Reset response
+            document.getElementById('responseContainer').classList.remove('active');
+            document.getElementById('loading').classList.remove('active');
+
+            modal.classList.add('active');
+            document.getElementById('apiInput').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('apiModal').classList.remove('active');
+            currentAPI = null;
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                testAPI();
+            }
+        }
+
+        async function testAPI() {
+            const input = document.getElementById('apiInput').value.trim();
+            
+            if (!input) {
+                alert('Please enter a value!');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const responseContainer = document.getElementById('responseContainer');
+            const testBtn = document.getElementById('testBtn');
+
+            // Show loading
+            loading.classList.add('active');
+            responseContainer.classList.remove('active');
+            testBtn.disabled = true;
+
+            try {
+                const url = `$${currentAPI.path}$$ {encodeURIComponent(input)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                // Hide loading
+                loading.classList.remove('active');
+                testBtn.disabled = false;
+
+                // Show response
+                document.getElementById('responseJSON').textContent = 
+                    JSON.stringify(data, null, 2);
+                responseContainer.classList.add('active');
+
+            } catch (error) {
+                loading.classList.remove('active');
+                testBtn.disabled = false;
+                
+                document.getElementById('responseJSON').innerHTML = 
+                    `<div class="error">
+                        <strong>Error:</strong> ${error.message}
+                        <br><br>
+                        Please check if the API endpoint is working correctly.
+                    </div>`;
+                responseContainer.classList.add('active');
+            }
+        }
+
+        function copyResponse() {
+            const responseText = document.getElementById('responseJSON').textContent;
+            navigator.clipboard.writeText(responseText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Close modal on outside click
+        document.getElementById('apiModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize on page load
+        init();
+    </script>
+</body>
+</html>
